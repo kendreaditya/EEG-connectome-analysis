@@ -2,7 +2,7 @@
 
 Connectomes are maps of the neural connection within the brain, which is considered the structural data of the brain. Electroencephalograms (EEG), however, records functional data, which collects information about brain activity. Combining EEG data and Connectome data allows models to understand what is happening where.
 
-<img src="https://upload.wikimedia.org/wikipedia/commons/c/cd/The_Human_Connectome.png" height="300"><img src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/26/Spike-waves.png/280px-Spike-waves.png" height="300">
+<img src="https://eurekalert.org/multimedia/pub/web/181783_web.jpg" height="300"><img src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/26/Spike-waves.png/280px-Spike-waves.png" height="300">
 
 ## Description
 
