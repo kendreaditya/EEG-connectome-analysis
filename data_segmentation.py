@@ -36,8 +36,8 @@ def twoD_10_data(data, labels):
         for X in datum:
             dataset['X'].append(X)
             dataset['y'].append(label)
-    np.save(np.array([dataset['X'], dataset['y']]), '../data/twoD_10_data.npy')
-    #torch.save(to_TensorDataset(dataset), '../data/twoD_10_data.pt')
+    #np.save('../data/twoD_10_data.npy', np.array([dataset['X'], dataset['y']]))
+    torch.save(to_TensorDataset(dataset), '../data/twoD_10_data.pt')
 
 def twoD_data(data, labels):
     dataset = {'X':[], 'y':[]}
