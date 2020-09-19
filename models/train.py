@@ -9,45 +9,57 @@ import datetime
 import os
 
 #Precison, Specifity/Sensitivity, Recall, F1, ROC curve,
-# ADD SOUPORT FOR TPUs
 class Train():
-    def __init__(self, model, dataset, epochs, batch_size, criterion, optimizer, cross_validation, device='cuda'):
+    def __init__(self, model, datasets, epochs, batch_size, criterion, optimizer, tensorboard=True, device_type='cuda', metrics_path="/content/drive/Shared drives/EEG_Aditya/model-results/"):
         torch.manual_seed(1)
         self.model = model
         self.epochs = epochs
         self.criterion = criterion
         self.optimizer = optimizer
+        self.metrics_path = metrics_path
+        self.shape = np.array([np.array(i) for i in datasets[0][1][0]]).shape
         self.model_name = f"{model.__class__.__name__}--{str(datetime.datetime.now()).replace(' ', '--').replace(':', '-').split('.')[0]}"
+        print(self.model_name)
+        time.sleep(1)
+        self.device(device_type)
+        self.data_loader(datasets, batch_size)
 
-        self.data_loader(dataset, batch_size, cross_validation)
-        if device=='cuda':
-            self.cuda_device()
+        if tensorboard:
+            self.tb = SummaryWriter()
 
-        self.train()
-        self.test()
+        #self.train()
+        test_acc, test_loss = self.test(self.test_dataloader, log=True)
+        print(f"Test Accuracy: {round(test_acc, 4)}, Test Loss: {round(test_loss,4)}")
 
-    def cuda_device(self):
-        self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-        self.model.to(self.device)
+    def device(self, device):
+        self.device_type = device
+        if device == "cuda":
+            self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+            self.model.to(self.device)
+
+    def save_model(self):
+        torch.save(self.model.state_dict(), f"{self.metrics_path}parameters/{self.model_name}.pt")
 
     def logger(self, epoch, batch, train_loss, train_acc, val_loss, val_acc):
-        if os.path.exists(f"../model-information/{self.model_name}.log") == False:
-            with open(f"../model-information/{self.model_name}.log", 'a') as file:
-                file.write(str(self.criterion))
-                file.write(str(self.optimizer))
-                file.write("\nepochs,batch,training loss,training accuracy,validation loss,validation accuracy\n")
+        if os.path.exists(f"{self.metrics_path}metrics/{self.model_name}.log") == False:
+            with open(f"{self.metrics_path}metrics/{self.model_name}.log", 'a') as file:
+                file.write(str(self.shape)+"\n")
+                file.write(str(self.model)+"\n")
+                file.write(str(self.criterion)+"\n")
+                file.write(str(self.optimizer)+"\n")
+                file.write("epochs,batch,training loss,training accuracy,validation loss,validation accuracy\n")
 
-        with open(f"../model-information/{self.model_name}.log", 'a') as file:
+        with open(f"{self.metrics_path}metrics/{self.model_name}.log", 'a') as file:
             file.write(f"{epoch},{batch},{round(float(train_loss),4)},{round(float(train_acc),4)},{round(float(val_loss),4)},{round(float(val_acc),4)}\n")
 
-    def data_loader(self, dataset, batch_size, cross_validation):
-        train_set, val_set, test_set = torch.utils.data.random_split(dataset, lengths=cross_validation)
-        self.train_dataloader = torch.utils.data.DataLoader(train_set, batch_size, shuffle=True)
-        self.val_dataloader = torch.utils.data.DataLoader(val_set, batch_size)
-        self.test_dataloader = torch.utils.data.DataLoader(test_set, batch_size)
+    def data_loader(self, datasets, batch_size):
+        if self.device_type=="cuda":
+            self.train_dataloader = torch.utils.data.DataLoader(datasets[0], batch_size, shuffle=True)
+            self.val_dataloader = torch.utils.data.DataLoader(datasets[1], batch_size)
+            self.test_dataloader = torch.utils.data.DataLoader(datasets[2], batch_size)
 
     def train(self):
-        min_loss = self.test()[1]
+        min_loss = self.test(self.test_dataloader, log=False)[1]
         for epoch in tqdm(range(self.epochs)):
             for batch_i,(data, targets) in enumerate(self.train_dataloader):
                 # Training
@@ -74,20 +86,31 @@ class Train():
                 # Logs model metrics
                 self.logger(epoch, batch_i, train_loss, train_acc, val_losses, val_accs)
 
-    def save_model(self):
-        torch.save(self.model.state_dict(), f"../model-parameters/{self.model_name}.pt")
+            # Tensorboard
+            self.tensorboard([['Training Loss', train_loss, epoch],
+                              ['Validation Loss', val_losses, epoch],
+                              ['Traning Accuracy', train_acc, epoch],
+                              ['Validation Accuracy', val_accs, epoch],
+                              ['Learning Rate', self.optimizer.param_groups[0]['lr'], epoch]])
+
+        print("Finished Training")
+        print(f"Training Accuracy: {round(train_acc, 4)}, Training Loss: {round(train_loss,4)}")
+        print(f"Validation Accuracy: {round(val_accs, 4)}, Validation Loss: {round(val_losses, 4)}")
+
 
     def forward_pass(self, data, targets, train=False):
+
         if train:
             self.model.zero_grad()
             self.model.train()
         else:
             self.model.eval()
 
-        outputs = self.model(data)
-        matches = [torch.argmax(i)==torch.argmax(j) for i,j in zip(outputs, targets)]
-        loss = self.criterion(outputs, targets)
-        acc = matches.count(True)/len(matches)
+        with (torch.enable_grad() if train else torch.no_grad()):
+            outputs = self.model(data)
+            matches = [torch.argmax(i)==(j) for i,j in zip(outputs, targets)]
+            loss = self.criterion(outputs, targets.long())
+            acc = matches.count(True)/len(matches)
 
         if train:
             loss.backward()
@@ -97,17 +120,19 @@ class Train():
         del matches
         return loss.item(), acc
 
-
-    def test(self):
+    def test(self, dataloader, log=True):
         accs, losses = 0,0
-        for batch_i, (data, targets) in enumerate(self.test_dataloader):
+        for batch_i, (data, targets) in enumerate(dataloader):
             data = data.to(self.device)
             targets = targets.to(self.device)
-            loss, acc = self.forward_pass(data, targets, train=False)
+            loss, acc = self.forward_pass(data, targets.long(), train=False)
             accs += acc
             losses += loss
         accs, losses = accs/(batch_i+1), losses/(batch_i+1)
+        if log:
+            self.logger(-1, -1, -1, -1, losses, accs)
         return accs, losses
 
-    def graph(self):
-        pass
+    def tensorboard(self, *scalars):
+        for name, scalar, epoch in scalars[0]:
+            self.tb.add_scalar(name, scalar, epoch)
