@@ -14,14 +14,11 @@ class AutoEncodeCNN(nn.Module):
     def forward(self, X):
         # Encoder
         X = F.relu(self.conv1(X))
-        print(X.shape)
         X = F.relu(self.conv2(X))
-        print(X.shape)
         X = self.pool(X)
-        print(X.shape)
+
         # Decoder
         X = F.relu(self.transconv1(X))
-        print(X.shape)
         X = self.transconv2(X)
         return X
 
