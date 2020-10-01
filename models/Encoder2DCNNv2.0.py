@@ -14,11 +14,9 @@ class AutoEncodeCNN(nn.Module):
     def forward(self, X):
         # Encoder
         X = F.relu(self.conv1(X))
-        print(X.shape)
         X = F.relu(self.conv2(X))
-        print(X.shape)
         X = self.pool(X)
-        print(X.shape)
+
         # Decoder
         X = F.relu(self.transconv1(X))
         X = self.transconv2(X)
@@ -28,24 +26,19 @@ class EncoderCNN(nn.Module):
     def __init__(self):
         super(EncoderCNN, self).__init__()
         # Encoder
-        self.conv1 = nn.Conv2d(in_channels=1, out_channels=32, kernel_size=(3, 3), stride=1, padding=1)
-        self.conv2 = nn.Conv2d(in_channels=32, out_channels=32, kernel_size=(3, 3), stride=1, padding=1)
-        self.pool = nn.MaxPool2d(kernel_size=(2, 2))
+        self.conv1 = nn.Conv2d(in_channels=1, out_channels=16, kernel_size=(4, 4), stride=2, padding=0)
+        self.conv2 = nn.Conv2d(in_channels=16, out_channels=32, kernel_size=(4, 4), stride=2, padding=1)
+        self.pool = nn.MaxPool2d(kernel_size=(2,2))
 
         # Dense Layers
-        self.fc1 = nn.Linear(in_features=17*17*32, out_features=1024)
-        self.fc2 = nn.Linear(in_features=1024, out_features=3)
+        self.fc1 = nn.Linear(in_features=32*4*4, out_features=512)
+        self.fc2 = nn.Linear(in_features=512, out_features=3)
 
     def forward(self, X):
         X = F.relu(self.conv1(X))
         X = F.relu(self.conv2(X))
         X = self.pool(X)
-        X = X.reshape(X.shape(0), -1)
+        X = X.reshape(X.size(0), -1)
         X = F.relu(self.fc1(X))
         X = self.fc2(X)
         return X
-
-model = AutoEncodeCNN()
-data = torch.rand(1,1,34,34)
-output = model(data)
-print(output.shape)
