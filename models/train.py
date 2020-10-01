@@ -7,8 +7,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import datetime
 import os
+from torch.utils.tensorboard import SummaryWriter
 
-#Precison, Specifity/Sensitivity, Recall, F1, ROC curve,
 class Train():
     def __init__(self, model, datasets, epochs, batch_size, criterion, optimizer, tensorboard=True, device_type='cuda', metrics_path="/content/drive/Shared drives/EEG_Aditya/model-results/"):
         torch.manual_seed(1)
@@ -23,7 +23,6 @@ class Train():
         time.sleep(1)
         self.device(device_type)
         self.data_loader(datasets, batch_size)
-
         if tensorboard:
             self.tb = SummaryWriter()
 
@@ -92,7 +91,6 @@ class Train():
                               ['Traning Accuracy', train_acc, epoch],
                               ['Validation Accuracy', val_accs, epoch],
                               ['Learning Rate', self.optimizer.param_groups[0]['lr'], epoch]])
-
         print("Finished Training")
         print(f"Training Accuracy: {round(train_acc, 4)}, Training Loss: {round(train_loss,4)}")
         print(f"Validation Accuracy: {round(val_accs, 4)}, Validation Loss: {round(val_losses, 4)}")
@@ -109,9 +107,11 @@ class Train():
         with (torch.enable_grad() if train else torch.no_grad()):
             outputs = self.model(data)
             matches = [torch.argmax(i)==(j) for i,j in zip(outputs, targets)]
-            loss = self.criterion(outputs, targets.long())
-            acc = matches.count(True)/len(matches)
-
+            loss = self.criterion(outputs, targets)
+            try:
+              acc = matches.count(True)/len(matches)
+            except:
+              acc = -1
         if train:
             loss.backward()
             self.optimizer.step()
@@ -136,3 +136,4 @@ class Train():
     def tensorboard(self, *scalars):
         for name, scalar, epoch in scalars[0]:
             self.tb.add_scalar(name, scalar, epoch)
+
