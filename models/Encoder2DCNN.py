@@ -38,7 +38,7 @@ class EncoderCNN(nn.Module):
         X = F.relu(self.conv1(X))
         X = F.relu(self.conv2(X))
         X = self.pool(X)
-        X = X.reshape(X.shape(0), -1)
+        X = X.reshape(X.size(0), -1)
         X = F.relu(self.fc1(X))
         X = self.fc2(X)
         return X
