@@ -26,7 +26,7 @@ class Train():
         if tensorboard:
             self.tb = SummaryWriter()
 
-        #self.train()
+        self.train()
         test_acc, test_loss = self.test(self.test_dataloader, log=True)
         print(f"Test Accuracy: {round(test_acc, 4)}, Test Loss: {round(test_loss,4)}")
 

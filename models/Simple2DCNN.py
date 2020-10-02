@@ -4,8 +4,8 @@ import torch.nn.functional as F
 class SimpleCNN(nn.Module):
     def __init__(self,):
         super(SimpleCNN, self).__init__()
-        self.conv1 = nn.conv2d(1, 32, 3, stride=1, padding=1)
-        self.conv2 = nn.conv2d(32, 32, 3, stride=1, padding=1)
+        self.conv1 = nn.Conv2d(1, 32, 3, stride=1, padding=1)
+        self.conv2 = nn.Conv2d(32, 32, 3, stride=1, padding=1)
         self.pool1 = nn.MaxPool2d(2)
         self.drop1 = nn.Dropout(0.5)
         self.fc1 = nn.Linear(17*17*32, 128)
