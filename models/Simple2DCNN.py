@@ -1,10 +1,11 @@
+import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
 class SimpleCNN(nn.Module):
-    def __init__(self,):
+    def __init__(self, in_channel):
         super(SimpleCNN, self).__init__()
-        self.conv1 = nn.Conv2d(1, 32, 3, stride=1, padding=1)
+        self.conv1 = nn.Conv2d(in_channel, 32, 3, stride=1, padding=1)
         self.conv2 = nn.Conv2d(32, 32, 3, stride=1, padding=1)
         self.pool1 = nn.MaxPool2d(2)
         self.drop1 = nn.Dropout(0.5)
