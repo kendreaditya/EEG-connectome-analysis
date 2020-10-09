@@ -22,9 +22,9 @@ class Prerocessor(Segmenter):
         test_X, test_y = [], []
         print("Averging test set.")
         for datum, label in tqdm(testset):
-            datum = [datum[:,:,:,0:3].tolist(), datum[:,:,:,3:7].tolist(), datum[:,:,:,7:12].tolist(), datum[:,:,:,12:30].tolist()]
+            datum = [datum[:,:,:,0:4].tolist(), datum[:,:,:,4:8].tolist(), datum[:,:,:,8:13].tolist(), datum[:,:,:,13:30].tolist()]
             for i in range(len(datum)):
-                datum[i] = self.average(datum[i], [34, 34, -1])
+                datum[i] = self.average(datum[i], [34, 34, len(datum[i][0][0][0]), -1])
             test_X.append(datum)
             test_y.append(label)
         test_X, test_y = torch.Tensor(test_X), torch.Tensor(test_y).long()-1
@@ -36,15 +36,15 @@ class Prerocessor(Segmenter):
         X, y = [], []
         for i in tqdm(range(2, self.data.shape[-1])):
             for datum, label in train_val:
-                # dataum.shape - [1, 34, 34, 50, 130]
+                # dataum.shape - [4, 34, 34, 50, 130]
                 # More data - double split with 2 nested for loops
                 splits = np.split(datum, [i], axis=len(datum.shape)-1)
 
                 for split in splits:
                     # try split[0]
-                    split = [split[:,:,:,0:3].tolist(), split[:,:,:,3:7].tolist(), split[:,:,:,7:12].tolist(), split[:,:,:,12:30].tolist()]
+                    split = [split[:,:,:,0:4].tolist(), split[:,:,:,4:8].tolist(), split[:,:,:,8:13].tolist(), split[:,:,:,13:30].tolist()]
                     for n in range(len(split)):
-                        split[n] = self.average(split[n], [34, 34, -1])
+                        split[n] = self.average(split[n], [34, 34, len(split[n][0][0]), -1])
                     X.append(split)
                     y.append(label)
         del train_val
