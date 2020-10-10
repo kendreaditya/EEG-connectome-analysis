@@ -2,19 +2,21 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-class Resnet3(nn.Module):
+class Resnet4(nn.Module):
     def __init__(self, in_channel):
-        super(Resnet3, self).__init__()
-        self.layer0 = nn.Sequential(nn.Conv4d(in_channel, 64, kernel_size=(4, 4), stride=(2, 2)),
-                                    nn.BatchNorm4d(64),
+        super(Resnet4, self).__init__()
+        self.layer0 = nn.Sequential(nn.Conv3d(in_channel, 256, kernel_size=(4, 4, 4), stride=(2, 2, 2)),
+                                    nn.BatchNorm3d(256),
                                     nn.ReLU(),
-                                    nn.MaxPool4d(kernel_size=3, stride=2, padding=1))
+                                    nn.MaxPool3d(kernel_size=3, stride=2, padding=1))
 
-        self.layer1 = nn.Sequential(nn.Conv4d(64, 128, kernel_size=(4, 4), stride=(2, 2)),
-                                    nn.BatchNorm4d(128),
+        self.layer1 = nn.Sequential(nn.Conv3d(256, 512, kernel_size=(4, 4, 4), stride=(2, 2, 2)),
+                                    nn.BatchNorm3d(512),
                                     nn.ReLU())
 
-        self.fc = nn.Sequential(nn.Linear(3*3*128, 3))
+        self.fc1 = nn.Sequential(nn.Linear(3*3*2*512, 1024),
+                                 nn.ReLU())
+        self.fc2 = nn.Sequential(nn.Linear(1024, 3))
 
     def forward(self, X):
         # CNN Layer 
@@ -25,8 +27,6 @@ class Resnet3(nn.Module):
         X = X.reshape(X.size(0), -1)
 
         # Fully Connected Layer
-        X = self.fc(X)
+        X = self.fc1(X)
+        X = self.fc2(X)
         return X
-
-model = Resnet3(1)
-print(model(torch.Tensor(1,1,34,34,30,130)).shape)

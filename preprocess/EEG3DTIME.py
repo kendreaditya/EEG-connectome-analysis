@@ -46,7 +46,13 @@ class Prerocessor(Segmenter):
         for datum, label in tqdm(dataset):
             datum = [datum[:,:,:,0:3], datum[:,:,:,3:7], datum[:,:,:,7:12], datum[:,:,:,12:30], datum[:,:,:,0:30]]
             for i in range(len(datum)):
-                band_data[list(band_data.keys())[i]].append(self.average(datum[i], [1, 34, 34, len(datum[i][0][0][0]), -1]))
+                time_data = []
+                for n in range(len(datum[i][0][0][0][0])):
+                    # n = 0-130
+                    # appended.shape = [34, 34]
+                    # time_data.shape = [99,1,130,34,34]
+                    time_data.append(self.average(datum[i][:,:,:,:,n], [34, 34, -1]))
+                band_data[list(band_data.keys())[i]].append([time_data])
             band_data["labels"].append(label-1.)
 
         # converts data in list to torch.tensor
