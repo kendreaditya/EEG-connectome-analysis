@@ -36,4 +36,4 @@ class Resnet4(nn.Module):
     def conv_output(self, X):
         X = self.layer0(X)
         X = self.layer1(X)
-        return X.flatten().shape
+        return X.reshape(X.size(0), -1).shape
