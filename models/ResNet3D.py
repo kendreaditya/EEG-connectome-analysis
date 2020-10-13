@@ -1,16 +1,17 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import numpy as np
 
 class Resnet4(nn.Module):
     def __init__(self, input_size, in_channel):
         super(Resnet4, self).__init__()
-        self.layer0 = nn.Sequential(nn.Conv3d(in_channel, 32, kernel_size=(4, 4, 4), stride=(2, 2, 2)),
+        self.layer0 = nn.Sequential(nn.Conv3d(in_channel, 32, kernel_size=(4, 4, 4), stride=(2, 2, 2), padding=(0,0,4)),
                                     nn.BatchNorm3d(32),
                                     nn.ReLU(),
                                     nn.MaxPool3d(kernel_size=3, stride=2, padding=1))
 
-        self.layer1 = nn.Sequential(nn.Conv3d(32, 64, kernel_size=(4, 4, 4), stride=(2, 2, 2)),
+        self.layer1 = nn.Sequential(nn.Conv3d(32, 64, kernel_size=(4, 4, 4), stride=(2, 2, 2), padding=(0,0,4)),
                                     nn.BatchNorm3d(64),
                                     nn.ReLU())
 
