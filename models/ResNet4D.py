@@ -37,6 +37,3 @@ class Resnet4(nn.Module):
         X = self.layer0(X)
         X = self.layer1(X)
         return X.reshape(X.size(0), -1).shape
-
-model = Resnet4((1,130,34,34,30),130)
-print(model(torch.rand(1,130,34,34,30)).shape)
