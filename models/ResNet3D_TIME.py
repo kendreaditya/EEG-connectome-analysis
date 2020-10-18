@@ -7,50 +7,27 @@ class Resnet(nn.Module):
     def __init__(self, input_size, in_channel):
         super(Resnet, self).__init__()
 
-        # Basic Blocks
-        self.basic_block1 = nn.Sequential(nn.Conv3d(64, 64, kernel_size=(3, 3, 3), stride=(1, 1, 1), padding=(1, 1, 1)),
-                                          nn.BatchNorm3d(64, momentum=0.1),
-                                          nn.ReLU(),
-                                          nn.Conv3d(64, 64, kernel_size=(3, 3, 3), stride=(1, 1, 1), padding=(1, 1, 1)),
-                                          nn.BatchNorm3d(64))
-
-        self.basic_block2_1 = nn.Sequential(nn.Conv3d(64, 128, kernel_size=(3, 3, 3), stride=(2, 2, 2), padding=(1, 1, 1)),
-                                            nn.BatchNorm3d(128, momentum=0.1),
-                                            nn.ReLU(),
-                                            nn.Conv3d(128, 128, kernel_size=(3, 3, 3), stride=(1, 1, 1), padding=(1, 1, 1)),
-                                            nn.BatchNorm3d(128))
-
-        self.basic_block2_2 = nn.Sequential(nn.Conv3d(128, 128, kernel_size=(3, 3, 3), stride=(1, 1, 1), padding=(1, 1, 1)),
-                                            nn.BatchNorm3d(128),
-                                            nn.ReLU(),
-                                            nn.Conv3d(128, 128, kernel_size=(3, 3, 3), stride=(1, 1, 1), padding=(1, 1, 1)),
-                                            nn.BatchNorm3d(128))
-
-        self.basic_block3_1 = nn.Sequential(nn.Conv3d(128, 256, kernel_size=(3, 3, 3), stride=(2, 2, 2), padding=(1, 1, 1)),
-                                            nn.BatchNorm3d(256, momentum=0.1),
-                                            nn.ReLU(),
-                                            nn.Conv3d(256, 256, kernel_size=(3, 3, 3), stride=(1, 1, 1), padding=(1, 1, 1)),
-                                            nn.BatchNorm3d(256))
-
-        self.basic_block3_2 = nn.Sequential(nn.Conv3d(256, 256, kernel_size=(3, 3, 3), stride=(1, 1, 1), padding=(1, 1, 1)),
-                                            nn.BatchNorm3d(256),
-                                            nn.ReLU(),
-                                            nn.Conv3d(256, 256, kernel_size=(3, 3, 3), stride=(1, 1, 1), padding=(1, 1, 1)),
-                                            nn.BatchNorm3d(256))
         # Layers
         self.layer0 = nn.Sequential(nn.Conv3d(in_channel, 64, kernel_size=(7, 3, 3), stride=(1, 1, 1), padding=(1, 1, 1)),
                                     nn.BatchNorm3d(64),
                                     nn.ReLU(),
                                     nn.MaxPool3d(kernel_size=3, stride=2, padding=1))
 
-        self.layer1 = nn.Sequential(self.basic_block1,
-                                    self.basic_block1)
+        self.layer1 = nn.Sequential(nn.Conv3d(64, 64, kernel_size=(3, 3, 3), stride=(1, 1, 1), padding=(1, 1, 1)),
+                                    nn.BatchNorm3d(64, momentum=0.1),
+                                    nn.ReLU(),
+                                    nn.Conv3d(64, 64, kernel_size=(3, 3, 3), stride=(1, 1, 1), padding=(1, 1, 1)),
+                                    nn.BatchNorm3d(64))
 
-        self.layer2 = nn.Sequential(self.basic_block2_1,
-                                    self.basic_block2_2)
+        self.layer2 = nn.Sequential(nn.Conv3d(64, 128, kernel_size=(3, 3, 3), stride=(2, 2, 2), padding=(1, 1, 1)),
+                                    nn.BatchNorm3d(128, momentum=0.1),
+                                    nn.ReLU())
 
-        self.layer3 = nn.Sequential(self.basic_block3_1,
-                                    self.basic_block3_2)
+        self.layer3 = nn.Sequential(nn.Conv3d(128, 256, kernel_size=(3, 3, 3), stride=(2, 2, 2), padding=(1, 1, 1)),
+                                    nn.BatchNorm3d(256, momentum=0.1),
+                                    nn.ReLU(),
+                                    nn.Conv3d(256, 256, kernel_size=(3, 3, 3), stride=(1, 1, 1), padding=(1, 1, 1)),
+                                    nn.BatchNorm3d(256))
 
         conv_output = self.conv_layers(torch.zeros(input_size)).shape
 

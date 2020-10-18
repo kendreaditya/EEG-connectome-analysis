@@ -58,7 +58,7 @@ class Train():
             self.test_dataloader = torch.utils.data.DataLoader(datasets[2], batch_size)
 
     def train(self):
-        min_loss = self.test(self.test_dataloader, log=False)[1]
+        min_acc = self.test(self.test_dataloader, log=False)[0]
         for epoch in tqdm(range(self.epochs)):
             for batch_i,(data, targets) in enumerate(self.train_dataloader):
                 # Training
@@ -78,9 +78,9 @@ class Train():
                 val_accs, val_losses = val_accs/(val_batch_i+1), val_losses/(val_batch_i+1)
 
                 # Saving model with lowest validation loss
-                if min_loss >= val_losses:
+                if min_acc >= val_accs:
                     self.save_model()
-                    min_loss = val_losses
+                    min_acc = val_accs
 
                 # Logs model metrics
                 self.logger(epoch, batch_i, train_loss, train_acc, val_losses, val_accs)
