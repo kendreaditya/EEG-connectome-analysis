@@ -8,26 +8,22 @@ class Resnet(nn.Module):
         super(Resnet, self).__init__()
 
         # Layers
-        self.layer0 = nn.Sequential(nn.Conv3d(in_channel, 64, kernel_size=(7, 3, 3), stride=(1, 1, 1), padding=(1, 1, 1)),
-                                    nn.BatchNorm3d(64),
+        self.layer0 = nn.Sequential(nn.Conv3d(in_channel, 32, kernel_size=(7, 3, 3), stride=(1, 1, 1), padding=(1, 1, 1)),
+                                    nn.BatchNorm3d(32),
                                     nn.ReLU(),
                                     nn.MaxPool3d(kernel_size=3, stride=2, padding=1))
 
-        self.layer1 = nn.Sequential(nn.Conv3d(64, 64, kernel_size=(3, 3, 3), stride=(1, 1, 1), padding=(1, 1, 1)),
-                                    nn.BatchNorm3d(64, momentum=0.1),
-                                    nn.ReLU(),
-                                    nn.Conv3d(64, 64, kernel_size=(3, 3, 3), stride=(1, 1, 1), padding=(1, 1, 1)),
-                                    nn.BatchNorm3d(64))
-
-        self.layer2 = nn.Sequential(nn.Conv3d(64, 128, kernel_size=(3, 3, 3), stride=(2, 2, 2), padding=(1, 1, 1)),
-                                    nn.BatchNorm3d(128, momentum=0.1),
+        self.layer1 = nn.Sequential(nn.Conv3d(32, 32, kernel_size=(3, 3, 3), stride=(1, 1, 1), padding=(1, 1, 1)),
+                                    nn.BatchNorm3d(32, momentum=0.1),
                                     nn.ReLU())
 
-        self.layer3 = nn.Sequential(nn.Conv3d(128, 256, kernel_size=(3, 3, 3), stride=(2, 2, 2), padding=(1, 1, 1)),
-                                    nn.BatchNorm3d(256, momentum=0.1),
-                                    nn.ReLU(),
-                                    nn.Conv3d(256, 256, kernel_size=(3, 3, 3), stride=(1, 1, 1), padding=(1, 1, 1)),
-                                    nn.BatchNorm3d(256))
+        self.layer2 = nn.Sequential(nn.Conv3d(32, 64, kernel_size=(3, 3, 3), stride=(2, 2, 2), padding=(1, 1, 1)),
+                                    nn.BatchNorm3d(64, momentum=0.1),
+                                    nn.ReLU())
+
+        self.layer3 = nn.Sequential(nn.Conv3d(64, 128, kernel_size=(3, 3, 3), stride=(2, 2, 2), padding=(1, 1, 1)),
+                                    nn.BatchNorm3d(128, momentum=0.1),
+                                    nn.ReLU())
 
         conv_output = self.conv_layers(torch.zeros(input_size)).shape
 
@@ -56,3 +52,4 @@ class Resnet(nn.Module):
         X = self.conv_layers(X)
         X = self.fc_layers(X)
         return X
+

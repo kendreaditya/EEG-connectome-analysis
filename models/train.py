@@ -78,7 +78,7 @@ class Train():
                 val_accs, val_losses = val_accs/(val_batch_i+1), val_losses/(val_batch_i+1)
 
                 # Saving model with lowest validation loss
-                if min_acc >= val_accs:
+                if min_acc <= val_accs:
                     self.save_model()
                     min_acc = val_accs
 
