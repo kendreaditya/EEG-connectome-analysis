@@ -54,8 +54,7 @@ class Resnet(nn.Module):
 
         conv_output = self.conv_layers(torch.zeros(input_size)).shape
 
-        self.fc1 = nn.Sequential(nn.AdaptiveAvgPool3d(output_size=(1, 1, 1)),
-                                 nn.Linear(conv_output[-1], 1024),
+        self.fc1 = nn.Sequential(nn.Linear(conv_output[-1], 1024),
                                  nn.ReLU())
         self.fc2 = nn.Sequential(nn.Linear(1024, 3))
 
