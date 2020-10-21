@@ -1,3 +1,5 @@
+import sys
+from datetime import datetime
 import torch
 import torch.nn as nn
 import torch.utils.data as data
@@ -5,8 +7,8 @@ import wandb
 import pytorch_lightning as pl
 from pytorch_lightning.loggers import WandbLogger
 from pytorch_lightning import Trainer
-import pytorch_lightning.metrics as metrics
-import sklearn
+from pytorch_lightning.metrics.functional import accuracy, precision, recall, f1_score, fbeta_score
+from sklearn import preprocessing, metrics
 import numpy as np
 from pdb import set_trace as bp
 
@@ -15,10 +17,6 @@ class ResNet(pl.LightningModule):
         super().__init__()
         # Metrics 
         self.criterion = nn.CrossEntropyLoss()
-        self.accuracy = metrics.Accuracy()
-        self.precision = metrics.Precision(num_classes=3)
-        self.recall = metrics.Recall(num_classes=3)
-        self.fbeta = metrics.Fbeta(num_classes=3, beta=0.5)
 
         # Layers
         self.layer0 = nn.Sequential(nn.Conv3d(in_channel, 32, kernel_size=(7, 3, 3), stride=(1, 1, 1), padding=(1, 1, 1)),
@@ -43,6 +41,18 @@ class ResNet(pl.LightningModule):
         self.fc1 = nn.Sequential(nn.Linear(conv_output[-1], 1024),
                                  nn.ReLU())
         self.fc2 = nn.Sequential(nn.Linear(1024, 3))
+
+        # Run Name
+        self.set_model_name()
+        self.set_model_notes()
+
+    def set_model_name(self):
+        file_name = sys.argv[0].split("/")[-1].replace(".py", "")
+        timestamp = datetime.now().strftime("%Y%m%d%H%M")
+        self.model_name = f"{file_name}-{timestamp}"
+
+    def set_model_notes(self):
+        self.model_notes = str(self.optimizers).split("(")[0][:-1]+str(self.criterion)
 
     def conv_layers(self, X):
         # CNN Layer 
@@ -71,52 +81,66 @@ class ResNet(pl.LightningModule):
         return optimzer
 
     def training_step(self, batch, batch_idx):
-        x, y = batch
-        outputs = self.forward(x)
-        loss = self.criterion(outputs, y)
+        data, targets = batch
+        outputs = self.forward(data)
+        loss = self.criterion(outputs, targets)
 
         # Logs metrics
-        metrics = self.metrics_step(outputs, y)
+        metrics = self.metrics_step(outputs, targets, "train")
+        metrics["train-loss"] = loss
         for metric in metrics:
-            self.log(f"train-{metric}", metrics[metric])
+            self.log(metric, metrics[metric])
+        return metrics
 
-        # Logs Loss
-        self.log("train-loss", loss)
+    def validation_step(self, batch, batch_idx):
+        data, targets = batch
+        outputs = self.forward(data)
+        loss = self.criterion(outputs, targets)
 
-        return loss
+        # Logs metrics
+        metrics = self.metrics_step(outputs, targets, "validation")
+        metrics["validation-loss"] = loss
+        for metric in metrics:
+            self.log(metric, metrics[metric])
+        return metrics
 
-    def metrics_step(self, outputs, labels):
-        pred = [torch.argmax(out) for out in outputs]
+    def validation_end(self, outputs):
+        avg_metrics = {key:[] for key in outputs[0]}
+        for metrics in outputs:
+            for key in avg_metrics:
+                avg_metrics[key].append(metrics[key])
 
-        accuracy_score = self.accuracy(pred, labels)
-        # ROC Graph
-        # X: Recall (sensitivity)
-        # y: Precision (weighted 1-specificity)
-        recall_score = self.recall(pred, labels)
-        precision_score = self.precision(pred, labels)
-        fbeta_score = self.fbeta(pred, labels)
+        avg_metrics = {"avg-"+key:np.mean(avg_metrics[key]) for key in avg_metrics}
+        return avg_metrics
 
-        f1_score = metrics.functional.classification.f1_score(pred, labels, num_classes=3)
-        confusion_matrix = metrics.functional.classification.confusion_matrix(pred, labels)
-        roc_auc_score = self.multiclass_roc_auc_score(labels, pred)
 
-        learning_rate = self.optimizers()[0].param_groups[0]['lr']
+    def metrics_step(self, outputs, targets, prefix):
+        pred = torch.argmax(outputs, dim=1)
 
-        return {'accuracy': accuracy_score,
-                'recall': recall_score,
-                'precision': precision_score,
-                'fbeta': fbeta_score,
-                'f1': f1_score,
-                'ROC-AUC': roc_auc_score,
-                'confusion-matrix':confusion_matrix,
-                'lr': learning_rate}
+        accuracy_score = accuracy(pred, targets)
+        recall_score = recall(pred, targets, num_classes=3)
+        precision_score = precision(pred, targets, num_classes=3)
+        fbeta = fbeta_score(pred, targets, beta=0.5, num_classes=3)
+        f1 = f1_score(pred, targets, num_classes=3)
+        roc_auc_score = self.multiclass_roc_auc_score(targets, pred)
+
+        learning_rate = self.optimizers().param_groups[0]['lr']
+
+        return {f'{prefix}-accuracy': accuracy_score,
+                f'{prefix}-recall': recall_score,
+                f'{prefix}-precision': precision_score,
+                f'{prefix}-fbeta': fbeta,
+                f'{prefix}-f1': f1,
+                f'{prefix}-ROC-AUC': roc_auc_score,
+                f'{prefix}-lr': learning_rate}
 
     def multiclass_roc_auc_score(self, y_test, y_pred, average="macro"):
-        lb = sklearn.preprocessing.LabelBinarizer()
+        y_test, y_pred = y_test.cpu(), y_pred.cpu()
+        lb = preprocessing.LabelBinarizer()
         lb.fit(y_test)
         y_test = lb.transform(y_test)
         y_pred = lb.transform(y_pred)
-        return sklearn.metrics.roc_auc_score(y_test, y_pred, average=average)
+        return metrics.roc_auc_score(y_test, y_pred, average=average)
 
 split = "split_1"
 band_type = "all"
@@ -125,16 +149,19 @@ dataset = torch.load("/content/drive/Shared drives/EEG_Aditya/data/EEG3DTIME_3SP
 #train_dataloader = data.TensorDataset(dataset["train"][band_type], dataset["train"]["labels"])
 #test_dataloader = data.TensorDataset(dataset["test"][band_type], dataset["test"]["labels"])
 
-dataset = data.TensorDataset(dataset["train"][band_type], dataset["train"]["labels"])
-train, val = data.random_split(dataset, [66, 11], generator=torch.Generator().manual_seed(42))
-train_dataloader, val_dataloader = data.DataLoader(train), data.DataLoader(val)
+dataset = data.TensorDataset(dataset["train"][band_type], dataset["train"]["labels"].long())
+train, val = data.random_split(dataset, [55, 11], generator=torch.Generator().manual_seed(42))
+train_dataloader, val_dataloader = data.DataLoader(train, batch_size=1024), data.DataLoader(val, batch_size=1024)
 
 model = ResNet()
-wandb_logger = WandbLogger()
+wandb_logger = WandbLogger(name=model.model_name, notes=model.model_notes, project="eeg-connectome-analysis", save_dir="/content/drive/Shared drives/EEG_Aditya/model-results/wandb", log_model=True)
 wandb_logger.watch(model, log='gradients', log_freq=100)
-trainer = Trainer(max_epochs=1000, gpus= 8, logger=wandb_logger, progress_bar_refresh_rate=20)
+trainer = Trainer(max_epochs=1000, gpus=1, logger=wandb_logger)
 trainer.fit(model, train_dataloader, val_dataloader)
 print("Done training.")
 
 # Debugger
 bp()
+# ROC Graph
+# X: Recall (sensitivity)
+# y: Precision (weighted 1-specificity)
