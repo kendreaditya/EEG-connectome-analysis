@@ -6,7 +6,6 @@ import torch.utils.data as data
 import wandb
 import pytorch_lightning as pl
 from pytorch_lightning.loggers import WandbLogger
-from pytorch_lightning import Trainer
 from pytorch_lightning.metrics.functional import accuracy, precision, recall, f1_score, fbeta_score
 from sklearn import preprocessing, metrics
 import numpy as np
@@ -109,11 +108,9 @@ class ResNet(pl.LightningModule):
         for metrics in outputs:
             for key in avg_metrics:
                 avg_metrics[key].append(metrics[key])
-
-        avg_metrics = {"avg-validation-"+key:np.mean(avg_metrics[key]) for key in avg_metrics}
+        avg_metrics = {"avg-validation-"+key:torch.as_tensor(avg_metrics[key]).mean() for key in avg_metrics}
         for key in avg_metrics:
             self.log(key, avg_metrics[key], prog_bar=True, on_step=False, on_epoch=True)
-        return avg_metrics
 
     def test_step(self, batch, batch_idx):
         data, targets = batch
@@ -125,16 +122,15 @@ class ResNet(pl.LightningModule):
         metrics["loss"] = loss
         return metrics
 
-    def test_step_end(self, outputs):
+    def test_epoch_end(self, outputs):
         avg_metrics = {key:[] for key in outputs[0]}
         for metrics in outputs:
             for key in avg_metrics:
                 avg_metrics[key].append(metrics[key])
 
-        avg_metrics = {"avg-test"+key:np.mean(avg_metrics[key]) for key in avg_metrics}
+        avg_metrics = {"avg-test"+key:torch.as_tensor(avg_metrics[key]).mean() for key in avg_metrics}
         for key in avg_metrics:
             self.log(key, avg_metrics[key], prog_bar=True, on_step=False, on_epoch=True)
-        return avg_metrics
 
     def metrics_step(self, outputs, targets):
         pred = torch.argmax(outputs, dim=1)
@@ -183,7 +179,7 @@ run_notes =f"{split},{band_type},({len(train_dataset)},{len(validation_dataset)}
 model = ResNet()
 wandb_logger = WandbLogger(name=model.model_name, notes=run_notes+","+model.model_notes, project="eeg-connectome-analysis", save_dir="/content/drive/Shared drives/EEG_Aditya/model-results/wandb", log_model=True)
 wandb_logger.watch(model, log='gradients', log_freq=100)
-trainer = Trainer(max_epochs=1000, gpus=1, logger=wandb_logger, precision=16)
+trainer = pl.Trainer(max_epochs=1000, gpus=1, logger=wandb_logger, precision=16, fast_dev_run=False)
 trainer.fit(model, train_dataloader, validation_dataloader)
 print("Done training.")
 trainer.test(model, test_dataloader)
