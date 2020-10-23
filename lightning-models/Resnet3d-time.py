@@ -102,8 +102,6 @@ class ResNet(pl.LightningModule):
         # Logs metrics
         metrics = self.metrics_step(outputs, targets)
         metrics["loss"] = loss
-        for key in metrics:
-            self.log(f"validation-{key}", metrics[key], prog_bar=False, on_step=False, on_epoch=True)
         return metrics
 
     def validation_epoch_end(self, outputs):
@@ -112,7 +110,7 @@ class ResNet(pl.LightningModule):
             for key in avg_metrics:
                 avg_metrics[key].append(metrics[key])
 
-        avg_metrics = {"avg-validation"+key:np.mean(avg_metrics[key]) for key in avg_metrics}
+        avg_metrics = {"avg-validation-"+key:np.mean(avg_metrics[key]) for key in avg_metrics}
         for key in avg_metrics:
             self.log(key, avg_metrics[key], prog_bar=True, on_step=False, on_epoch=True)
         return avg_metrics
@@ -125,8 +123,6 @@ class ResNet(pl.LightningModule):
         # Logs metrics
         metrics = self.metrics_step(outputs, targets)
         metrics["loss"] = loss
-        for key in metrics:
-            self.log(f"test-{key}", metrics[key], prog_bar=False, on_step=False, on_epoch=True)
         return metrics
 
     def test_step_end(self, outputs):
