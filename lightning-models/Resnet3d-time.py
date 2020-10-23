@@ -90,7 +90,7 @@ class ResNet(pl.LightningModule):
         metrics = self.metrics_step(outputs, targets)
         metrics["loss"] = loss
         for key in metrics:
-            self.log(f"train-{key}", metrics[key], prog_bar=True, on_step=True, on_epoch=True)
+            self.log(f"train-{key}", metrics[key], prog_bar=False, on_step=True, on_epoch=True)
         return metrics
 
     def validation_step(self, batch, batch_idx):
@@ -99,8 +99,8 @@ class ResNet(pl.LightningModule):
         loss = self.criterion(outputs, targets)
 
         # Logs metrics
-        metrics = self.metrics_step(outputs, targets)
-        metrics["loss"] = loss
+        metrics = self.metrics_step(outputs, targets, prefix="validation-")
+        metrics["validation-loss"] = loss
         return metrics
 
     def validation_epoch_end(self, outputs):
@@ -108,7 +108,7 @@ class ResNet(pl.LightningModule):
         for metrics in outputs:
             for key in avg_metrics:
                 avg_metrics[key].append(metrics[key])
-        avg_metrics = {"avg-validation-"+key:torch.as_tensor(avg_metrics[key]).mean() for key in avg_metrics}
+        avg_metrics = {key:torch.as_tensor(avg_metrics[key]).mean() for key in avg_metrics}
         for key in avg_metrics:
             self.log(key, avg_metrics[key], prog_bar=True, on_step=False, on_epoch=True)
 
@@ -118,8 +118,8 @@ class ResNet(pl.LightningModule):
         loss = self.criterion(outputs, targets)
 
         # Logs metrics
-        metrics = self.metrics_step(outputs, targets)
-        metrics["loss"] = loss
+        metrics = self.metrics_step(outputs, targets, prefix="test-")
+        metrics["test-loss"] = loss
         return metrics
 
     def test_epoch_end(self, outputs):
@@ -128,11 +128,11 @@ class ResNet(pl.LightningModule):
             for key in avg_metrics:
                 avg_metrics[key].append(metrics[key])
 
-        avg_metrics = {"avg-test"+key:torch.as_tensor(avg_metrics[key]).mean() for key in avg_metrics}
+        avg_metrics = {key:torch.as_tensor(avg_metrics[key]).mean() for key in avg_metrics}
         for key in avg_metrics:
-            self.log(key, avg_metrics[key], prog_bar=True, on_step=False, on_epoch=True)
+            self.log(key, avg_metrics[key], prog_bar=False, on_step=False, on_epoch=True)
 
-    def metrics_step(self, outputs, targets):
+    def metrics_step(self, outputs, targets, prefix=""):
         pred = torch.argmax(outputs, dim=1)
 
         accuracy_score = accuracy(pred, targets)
@@ -144,13 +144,13 @@ class ResNet(pl.LightningModule):
 
         learning_rate = self.optimizers().param_groups[0]['lr']
 
-        return {'accuracy': accuracy_score,
-                'recall': recall_score,
-                'precision': precision_score,
-                'fbeta': fbeta,
-                'f1': f1,
-                'ROC-AUC': roc_auc_score,
-                'lr': learning_rate}
+        return {f'{prefix}accuracy': accuracy_score,
+                f'{prefix}recall': recall_score,
+                f'{prefix}precision': precision_score,
+                f'{prefix}fbeta': fbeta,
+                f'{prefix}f1': f1,
+                f'{prefix}ROC-AUC': roc_auc_score,
+                f'{prefix}lr': learning_rate}
 
     def multiclass_roc_auc_score(self, y_test, y_pred, average="macro"):
         y_test, y_pred = y_test.cpu(), y_pred.cpu()
@@ -179,7 +179,10 @@ run_notes =f"{split},{band_type},({len(train_dataset)},{len(validation_dataset)}
 model = ResNet()
 wandb_logger = WandbLogger(name=model.model_name, notes=run_notes+","+model.model_notes, project="eeg-connectome-analysis", save_dir="/content/drive/Shared drives/EEG_Aditya/model-results/wandb", log_model=True)
 wandb_logger.watch(model, log='gradients', log_freq=100)
-trainer = pl.Trainer(max_epochs=1000, gpus=1, logger=wandb_logger, precision=16, fast_dev_run=False)
+
+early_stop_callback = pl.callbacks.EarlyStopping(monitor='validation-loss', min_delta=0.00, patience=10, verbose=True, mode='auto')
+trainer = pl.Trainer(max_epochs=1000, gpus=1, logger=wandb_logger, precision=16, fast_dev_run=False,
+                     auto_lr_find=True, auto_scale_batch_size=True, early_stop_callback=early_stop_callback)
 trainer.fit(model, train_dataloader, validation_dataloader)
 print("Done training.")
 trainer.test(model, test_dataloader)
