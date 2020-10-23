@@ -52,11 +52,9 @@ class ResNet(pl.LightningModule):
         self.model_name = f"{file_name}-{timestamp}"
 
     def set_model_notes(self, input_size):
-        optimizer = str(self.optimizers)
+        optimizer = str(self.optimizers).split(" ")[0]
         loss = str(self.criterion)
-        data_dist = {"train": None,
-                     "validation": None,
-                     "test": None}
+        return f"{optimizer},{loss}"
 
     def conv_layers(self, X):
         # CNN Layer 
@@ -184,8 +182,10 @@ train_dataloader = data.DataLoader(test_dataset, batch_size=256)
 validation_dataloader = data.DataLoader(validation_dataset, batch_size=256)
 test_dataloader = data.DataLoader(train_dataset, batch_size=256)
 
+run_notes =f"{split},{band_type},({len(train_dataset)},{len(train_dataset)},{len(train_dataset)})"
+
 model = ResNet()
-wandb_logger = WandbLogger(name=model.model_name, notes=model.model_notes, project="eeg-connectome-analysis", save_dir="/content/drive/Shared drives/EEG_Aditya/model-results/wandb", log_model=True)
+wandb_logger = WandbLogger(name=model.model_name, notes=run_notes+","+model.model_notes, project="eeg-connectome-analysis", save_dir="/content/drive/Shared drives/EEG_Aditya/model-results/wandb", log_model=True)
 wandb_logger.watch(model, log='gradients', log_freq=100)
 trainer = Trainer(max_epochs=1000, gpus=1, logger=wandb_logger, precision=16)
 trainer.fit(model, train_dataloader, validation_dataloader)
