@@ -44,15 +44,19 @@ class ResNet(pl.LightningModule):
 
         # Run Name
         self.set_model_name()
-        self.set_model_notes()
+        self.set_model_notes(input_size)
 
     def set_model_name(self):
         file_name = sys.argv[0].split("/")[-1].replace(".py", "")
         timestamp = datetime.now().strftime("%Y%m%d%H%M")
         self.model_name = f"{file_name}-{timestamp}"
 
-    def set_model_notes(self):
-        self.model_notes = str(self.optimizers).split("(")[0][:-1]+str(self.criterion)
+    def set_model_notes(self, input_size):
+        optimizer = str(self.optimizers)
+        loss = str(self.criterion)
+        data_dist = {"train": None,
+                     "validation": None,
+                     "test": None}
 
     def conv_layers(self, X):
         # CNN Layer 
@@ -77,7 +81,7 @@ class ResNet(pl.LightningModule):
         return X
 
     def configure_optimizers(self):
-        optimzer = torch.optim.SGD(self.parameters(), lr=1e-5)
+        optimzer = torch.optim.SGD(self.parameters(), lr=1e-5, momentum=1)
         return optimzer
 
     def training_step(self, batch, batch_idx):
@@ -86,10 +90,10 @@ class ResNet(pl.LightningModule):
         loss = self.criterion(outputs, targets)
 
         # Logs metrics
-        metrics = self.metrics_step(outputs, targets, "train")
-        metrics["train-loss"] = loss
-        for metric in metrics:
-            self.log(metric, metrics[metric])
+        metrics = self.metrics_step(outputs, targets)
+        metrics["loss"] = loss
+        for key in metrics:
+            self.log(f"train-{key}", metrics[key], prog_bar=True, on_step=True, on_epoch=True)
         return metrics
 
     def validation_step(self, batch, batch_idx):
@@ -98,23 +102,47 @@ class ResNet(pl.LightningModule):
         loss = self.criterion(outputs, targets)
 
         # Logs metrics
-        metrics = self.metrics_step(outputs, targets, "validation")
-        metrics["validation-loss"] = loss
-        for metric in metrics:
-            self.log(metric, metrics[metric])
+        metrics = self.metrics_step(outputs, targets)
+        metrics["loss"] = loss
+        for key in metrics:
+            self.log(f"validation-{key}", metrics[key], prog_bar=False, on_step=False, on_epoch=True)
         return metrics
 
-    def validation_end(self, outputs):
+    def validation_epoch_end(self, outputs):
         avg_metrics = {key:[] for key in outputs[0]}
         for metrics in outputs:
             for key in avg_metrics:
                 avg_metrics[key].append(metrics[key])
 
-        avg_metrics = {"avg-"+key:np.mean(avg_metrics[key]) for key in avg_metrics}
+        avg_metrics = {"avg-validation"+key:np.mean(avg_metrics[key]) for key in avg_metrics}
+        for key in avg_metrics:
+            self.log(key, avg_metrics[key], prog_bar=True, on_step=False, on_epoch=True)
         return avg_metrics
 
+    def test_step(self, batch, batch_idx):
+        data, targets = batch
+        outputs = self.forward(data)
+        loss = self.criterion(outputs, targets)
 
-    def metrics_step(self, outputs, targets, prefix):
+        # Logs metrics
+        metrics = self.metrics_step(outputs, targets)
+        metrics["loss"] = loss
+        for key in metrics:
+            self.log(f"test-{key}", metrics[key], prog_bar=False, on_step=False, on_epoch=True)
+        return metrics
+
+    def test_step_end(self, outputs):
+        avg_metrics = {key:[] for key in outputs[0]}
+        for metrics in outputs:
+            for key in avg_metrics:
+                avg_metrics[key].append(metrics[key])
+
+        avg_metrics = {"avg-test"+key:np.mean(avg_metrics[key]) for key in avg_metrics}
+        for key in avg_metrics:
+            self.log(key, avg_metrics[key], prog_bar=True, on_step=False, on_epoch=True)
+        return avg_metrics
+
+    def metrics_step(self, outputs, targets):
         pred = torch.argmax(outputs, dim=1)
 
         accuracy_score = accuracy(pred, targets)
@@ -126,13 +154,13 @@ class ResNet(pl.LightningModule):
 
         learning_rate = self.optimizers().param_groups[0]['lr']
 
-        return {f'{prefix}-accuracy': accuracy_score,
-                f'{prefix}-recall': recall_score,
-                f'{prefix}-precision': precision_score,
-                f'{prefix}-fbeta': fbeta,
-                f'{prefix}-f1': f1,
-                f'{prefix}-ROC-AUC': roc_auc_score,
-                f'{prefix}-lr': learning_rate}
+        return {'accuracy': accuracy_score,
+                'recall': recall_score,
+                'precision': precision_score,
+                'fbeta': fbeta,
+                'f1': f1,
+                'ROC-AUC': roc_auc_score,
+                'lr': learning_rate}
 
     def multiclass_roc_auc_score(self, y_test, y_pred, average="macro"):
         y_test, y_pred = y_test.cpu(), y_pred.cpu()
@@ -145,21 +173,25 @@ class ResNet(pl.LightningModule):
 split = "split_1"
 band_type = "all"
 
+# Datasets
 dataset = torch.load("/content/drive/Shared drives/EEG_Aditya/data/EEG3DTIME_3SPLIT.pt")[split]
-#train_dataloader = data.TensorDataset(dataset["train"][band_type], dataset["train"]["labels"])
-#test_dataloader = data.TensorDataset(dataset["test"][band_type], dataset["test"]["labels"])
+train_val_dataset = data.TensorDataset(dataset["train"][band_type], dataset["train"]["labels"].long())
+train_dataset, validation_dataset = data.random_split(train_val_dataset, [44, 22], generator=torch.Generator().manual_seed(1))
+test_dataset = data.TensorDataset(dataset["test"][band_type], dataset["test"]["labels"].long())
 
-dataset = data.TensorDataset(dataset["train"][band_type], dataset["train"]["labels"].long())
-train, val = data.random_split(dataset, [55, 11], generator=torch.Generator().manual_seed(42))
-train_dataloader, val_dataloader = data.DataLoader(train, batch_size=1024), data.DataLoader(val, batch_size=1024)
+# Dataloaders
+train_dataloader = data.DataLoader(test_dataset, batch_size=256)
+validation_dataloader = data.DataLoader(validation_dataset, batch_size=256)
+test_dataloader = data.DataLoader(train_dataset, batch_size=256)
 
 model = ResNet()
 wandb_logger = WandbLogger(name=model.model_name, notes=model.model_notes, project="eeg-connectome-analysis", save_dir="/content/drive/Shared drives/EEG_Aditya/model-results/wandb", log_model=True)
 wandb_logger.watch(model, log='gradients', log_freq=100)
-trainer = Trainer(max_epochs=1000, gpus=1, logger=wandb_logger)
-trainer.fit(model, train_dataloader, val_dataloader)
+trainer = Trainer(max_epochs=1000, gpus=1, logger=wandb_logger, precision=16)
+trainer.fit(model, train_dataloader, validation_dataloader)
 print("Done training.")
-
+trainer.test(model, test_dataloader)
+print("Done testing.")
 # Debugger
 bp()
 # ROC Graph
