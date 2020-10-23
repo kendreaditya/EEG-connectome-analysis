@@ -51,7 +51,7 @@ class ResNet(pl.LightningModule):
         self.model_name = f"{file_name}-{timestamp}"
 
     def set_model_notes(self, input_size):
-        optimizer = self.optimizers.__class__
+        optimizer = type(self.optimizers)
         loss = str(self.criterion)
         self.model_notes = f"{optimizer},{loss}"
 
