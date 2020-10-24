@@ -84,13 +84,24 @@ wandb_logger = WandbLogger(name=model.model_name, notes=run_notes+","+model.mode
 wandb_logger.watch(model, log='gradients', log_freq=100)
 
 # Checkpoints
-checkpoint_callback = pl.callbacks.ModelCheckpoint(monitor='validation-loss')
-#early_stop_callback = pl.callbacks.EarlyStopping(monitor='validation-loss', min_delta=0.00, patience=10, verbose=True, mode='auto')
+val_loss_cp = pl.callbacks.ModelCheckpoint(monitor='validation-loss')
+val_accuracy_cp = pl.callbacks.ModelCheckpoint(monitor='validation-accuracy')
 
 trainer = pl.Trainer(max_epochs=1000, gpus=1, logger=wandb_logger, precision=16, fast_dev_run=False,
                      auto_lr_find=True, auto_scale_batch_size=True, log_every_n_steps=1, default_root_dir="/content/drive/Shared drives/EEG_Aditya/model-results/checkpoints",
-                    checkpoint_callback=checkpoint_callback)
+                    checkpoint_callback=[val_accuracy_cp, val_loss_cp])
 trainer.fit(model, train_dataloader, validation_dataloader)
 print("Done training.")
+
+print("Testing model on last epoch.")
 trainer.test(model, test_dataloader)
+
+print(f"Testing model with best validation accuracy\t{val_accuracy_cp.best_model_score}.")
+model = model.load_from_checkpoint(val_accuracy_cp.best_model_path)
+trainer.test(model, test_dataloader)
+
+print(f"Testing model with best validation loss\t{val_loss_cp.best_model_score}.")
+model = model.load_from_checkpoint(val_loss_cp.best_model_path)
+trainer.test(model, test_dataloader)
+
 print("Done testing.")
