@@ -11,7 +11,7 @@ from sklearn import preprocessing, metrics
 import numpy as np
 from pdb import set_trace as bp
 
-class ResNet(prebpl.PrebuildLightningModule):
+class ResNet(prebpl.PrebuiltLightningModule):
     def __init__(self, input_size=(1,1,130,34,34), in_channel=1):
         super().__init__()
         # Layers
