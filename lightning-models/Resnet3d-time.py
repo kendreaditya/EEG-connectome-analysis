@@ -38,7 +38,9 @@ class ResNet(prebpl.PrebuiltLightningModule):
                                  nn.ReLU())
         self.fc2 = nn.Sequential(nn.Linear(1024, 3))
         
-        self.set_model_notes(input_size)
+        self.set_model_tags(input_size)
+        self.model_tags.append(self.file_name)
+        
 
     def conv_layers(self, X):
         # CNN Layer 
@@ -82,26 +84,30 @@ run_notes =f"{split},{band_type},({len(train_dataset)},{len(validation_dataset)}
 model = ResNet()
 
 # Logging
-wandb_logger = WandbLogger(name=model.model_name, notes=run_notes+","+model.model_notes, project="eeg-connectome-analysis", save_dir="/content/drive/Shared drives/EEG_Aditya/model-results/wandb", log_model=True)
+model.model_tags.append(split)
+model.model_tags.append(band_type)
+model.model_tags.append("train:"+str(len(train_dataset)))
+model.model_tags.append("validation:"+str(len(validation_dataset)))
+model.model_tags.append("test:"+str(len(test_dataset)))
+
+wandb_logger = WandbLogger(name=model.model_name, tags=model.model_tags, project="eeg-connectome-analysis", save_dir="/content/drive/Shared drives/EEG_Aditya/model-results/wandb", log_model=True)
 wandb_logger.watch(model, log='gradients', log_freq=100)
 
 # Checkpoints
 val_loss_cp = pl.callbacks.ModelCheckpoint(monitor='validation-loss')
-val_accuracy_cp = pl.callbacks.ModelCheckpoint(monitor='validation-accuracy')
 
 trainer = pl.Trainer(max_epochs=1000, gpus=1, logger=wandb_logger, precision=16, fast_dev_run=False,
-                     auto_lr_find=True, auto_scale_batch_size=True, log_every_n_steps=1, default_root_dir="/content/drive/Shared drives/EEG_Aditya/model-results/checkpoints",
+                     auto_lr_find=False, auto_scale_batch_size=False, log_every_n_steps=1,
                     checkpoint_callback=val_loss_cp)
 trainer.fit(model, train_dataloader, validation_dataloader)
 print("Done training.")
 
 print("Testing model on last epoch.")
 trainer.test(model, test_dataloader)
-"""
-print(f"Testing model with best validation accuracy\t{val_accuracy_cp.best_model_score}.")
-model = model.load_from_checkpoint(val_accuracy_cp.best_model_path)
-trainer.test(model, test_dataloader)
-"""
+model_path = val_loss_cp.best_model_path
+model_path = model_path[:model_path.rfind('/')]+"lastModel.ckpt"
+trainer.save_checkpoint(model_path)
+
 print(f"Testing model with best validation loss\t{val_loss_cp.best_model_score}.")
 model = model.load_from_checkpoint(val_loss_cp.best_model_path)
 trainer.test(model, test_dataloader)
