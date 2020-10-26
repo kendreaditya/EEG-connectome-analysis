@@ -6,6 +6,7 @@ import torch.utils.data as data
 import wandb
 import pytorch_lightning as pl
 from pytorch_lightning.loggers import WandbLogger
+from pytorch_lightning.callbacks import Callback
 from pytorch_lightning.metrics.functional import accuracy, precision, recall, f1_score, fbeta_score
 from sklearn import preprocessing, metrics
 import numpy as np
@@ -14,20 +15,19 @@ class PrebuiltLightningModule(pl.LightningModule):
     def __init__(self):
         super().__init__()
         # Metrics 
+        pl.seed_everything(seed=108)
         self.criterion = nn.CrossEntropyLoss()
 
         # Run Name
         self.set_model_name()
 
     def set_model_name(self):
-        file_name = sys.argv[0].split("/")[-1].replace(".py", "")
+        self.file_name = sys.argv[0].split("/")[-1].replace(".py", "")
         timestamp = datetime.now().strftime("%Y%m%d%H%M")
-        self.model_name = f"{file_name}-{timestamp}"
+        self.model_name = f"{self.file_name}-{timestamp}"
 
-    def set_model_notes(self, input_size):
-        loss = str(self.criterion)
-        optimizer = str("SGD")
-        self.model_notes = f"{optimizer},{loss}"
+    def set_model_tags(self, input_size):
+        self.model_tags = [str(self.criterion), "SGD", str(input_size)]
 
     def configure_optimizers(self):
         optimzer = torch.optim.SGD(self.parameters(), lr=1e-5, momentum=1)
