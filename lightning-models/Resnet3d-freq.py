@@ -12,10 +12,10 @@ import numpy as np
 from pdb import set_trace as bp
 
 class ResNet(prebpl.PrebuiltLightningModule):
-    def __init__(self, input_size=(1,1,130,34,34), in_channel=1):
+    def __init__(self, input_size=(1,1,34,34,30), in_channel=1):
         super().__init__()
         # Layers
-        self.layer0 = nn.Sequential(nn.Conv3d(in_channel, 32, kernel_size=(7, 3, 3), stride=(1, 1, 1), padding=(1, 1, 1)),
+        self.layer0 = nn.Sequential(nn.Conv3d(in_channel, 32, kernel_size=(3, 3, 3), stride=(1, 1, 1), padding=(1, 1, 1)),
                                     nn.BatchNorm3d(32),
                                     nn.ReLU(),
                                     nn.MaxPool3d(kernel_size=3, stride=2, padding=1))
@@ -63,14 +63,11 @@ class ResNet(prebpl.PrebuiltLightningModule):
         X = self.fc_layers(X)
         return X
 
-# Model init
-model = ResNet()
-
-split = "split_3"
-band_type = "all"
+split = "split_1"
+band_type = "delta"
 
 # Datasets
-dataset = torch.load("/content/drive/Shared drives/EEG_Aditya/data/EEG3DTIME_3SPLIT.pt")[split]
+dataset = torch.load("/content/drive/Shared drives/EEG_Aditya/data/EEG3DFREQ-3SPLIT.pt")[split]
 train_val_dataset = data.TensorDataset(dataset["train"][band_type], dataset["train"]["labels"].long())
 train_dataset, validation_dataset = data.random_split(train_val_dataset, [44, 22])
 test_dataset = data.TensorDataset(dataset["test"][band_type], dataset["test"]["labels"].long())
@@ -79,6 +76,9 @@ test_dataset = data.TensorDataset(dataset["test"][band_type], dataset["test"]["l
 train_dataloader = data.DataLoader(test_dataset, batch_size=256)
 validation_dataloader = data.DataLoader(validation_dataset, batch_size=256)
 test_dataloader = data.DataLoader(train_dataset, batch_size=256)
+
+# Model init
+model = ResNet(input_size=dataset["train"][band_type].shape,in_channel=1)
 
 # Logging
 model.model_tags.append(split)
