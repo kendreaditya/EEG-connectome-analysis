@@ -15,7 +15,8 @@ class PrebuiltLightningModule(pl.LightningModule):
     def __init__(self):
         super().__init__()
         # Metrics 
-        pl.seed_everything(seed=108)
+        self.seed = np.random.randint(220)
+        pl.seed_everything(seed=self.seed)
         self.criterion = nn.CrossEntropyLoss()
 
         # Run Name

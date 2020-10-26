@@ -63,13 +63,16 @@ class ResNet(prebpl.PrebuiltLightningModule):
         X = self.fc_layers(X)
         return X
 
-split = "split_1"
+# Model init
+model = ResNet()    
+
+split = "split_3"
 band_type = "all"
 
 # Datasets
 dataset = torch.load("/content/drive/Shared drives/EEG_Aditya/data/EEG3DTIME_3SPLIT.pt")[split]
 train_val_dataset = data.TensorDataset(dataset["train"][band_type], dataset["train"]["labels"].long())
-train_dataset, validation_dataset = data.random_split(train_val_dataset, [44, 22], generator=torch.Generator().manual_seed(108))
+train_dataset, validation_dataset = data.random_split(train_val_dataset, [44, 22])
 test_dataset = data.TensorDataset(dataset["test"][band_type], dataset["test"]["labels"].long())
 
 # Dataloaders
@@ -77,15 +80,13 @@ train_dataloader = data.DataLoader(test_dataset, batch_size=256)
 validation_dataloader = data.DataLoader(validation_dataset, batch_size=256)
 test_dataloader = data.DataLoader(train_dataset, batch_size=256)
 
-# Model init
-model = ResNet()
-
 # Logging
 model.model_tags.append(split)
 model.model_tags.append(band_type)
 model.model_tags.append("train:"+str(len(train_dataset)))
 model.model_tags.append("validation:"+str(len(validation_dataset)))
 model.model_tags.append("test:"+str(len(test_dataset)))
+model.model_tags.append("seed:"+str(model.seed))
 
 wandb_logger = WandbLogger(name=model.model_name, tags=model.model_tags, project="eeg-connectome-analysis", save_dir="/content/drive/Shared drives/EEG_Aditya/model-results/wandb", log_model=True)
 wandb_logger.watch(model, log='gradients', log_freq=100)
