@@ -113,11 +113,30 @@ class PrebuiltLightningModule(pl.LightningModule):
         y_pred = lb.transform(y_pred)
         return metrics.roc_auc_score(y_test, y_pred, average=average)
 
+    def sparce_split(self, X, labels, train_split_ratio, num_classes=3):
+        train_dataset = {"data":[], "labels": []}
+        train_dist = {i:0 for i in range(num_classes)}
+        validation_dataset = {"data":[], "labels": []}
+        validation_dist = {i:0 for i in range(num_classes)}
+
+        for x,y in zip(X, labels):
+            x = np.array(x)
+            if validation_dist[int(y)] < (train_split_ratio[1]//num_classes):
+                validation_dataset["data"].append(x)
+                validation_dataset["labels"].append(y)
+                validation_dist[int(y)] += 1
+            elif train_dist[int(y)] < (train_split_ratio[0]//num_classes):
+                train_dataset["data"].append(x)
+                train_dataset["labels"].append(y)
+                train_dist[int(y)] += 1
+
+        train_dataset = data.TensorDataset(torch.Tensor(train_dataset["data"]), torch.Tensor(train_dataset["labels"]).long())
+        validation_dataset = data.TensorDataset(torch.Tensor(validation_dataset["data"]), torch.Tensor(validation_dataset["labels"]).long())
+        return train_dataset, validation_dataset
+
     def datasets(self, dataset_path, split, band_type, train_split_ratio):
         dataset = torch.load(dataset_path)[split]
-        train_val_dataset = data.TensorDataset(dataset["train"][band_type], dataset["train"]["labels"].long())
-        # Add sparce datasplit
-        train_dataset, validation_dataset = data.random_split(train_val_dataset, train_split_ratio)
+        train_dataset, validation_dataset = self.sparce_split(dataset["train"][band_type], dataset["train"]["labels"], train_split_ratio)
         test_dataset = data.TensorDataset(dataset["test"][band_type], dataset["test"]["labels"].long())
         return train_dataset, validation_dataset, test_dataset
 
@@ -126,9 +145,3 @@ class PrebuiltLightningModule(pl.LightningModule):
         validation_dataloader = data.DataLoader(validation_dataset, **kwargs)
         test_dataloader = data.DataLoader(train_dataset, **kwargs)
         return train_dataloader, validation_dataloader, test_dataloader
-
-
-
-
-
-

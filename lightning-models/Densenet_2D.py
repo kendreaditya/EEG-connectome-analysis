@@ -34,7 +34,7 @@ band_type = "delta"
 # Model init
 model = Densenet()
 train_dataset, validation_dataset, test_dataset = model.datasets("/content/drive/Shared drives/EEG_Aditya/data/EEG3DTIME_3SPLIT.pt",
-                                                                split, band_type, [44, 22])
+                                                                split, band_type, [45, 21])
 
 train_dataloader, validation_dataloader, test_dataloader = model.dataloaders(train_dataset, validation_dataset, test_dataset,
                                                                              batch_size=256)
