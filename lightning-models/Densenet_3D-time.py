@@ -73,3 +73,4 @@ def train(split, band_type):
 for band_type in ["delta", "theta", "alpha", "beta", "all"]:
     for split in ["split_1", "split_2", "split_3"]:
         train(split, band_type)
+        print(f"Done with {band_type} with split {split}.")
