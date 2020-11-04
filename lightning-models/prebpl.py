@@ -113,3 +113,22 @@ class PrebuiltLightningModule(pl.LightningModule):
         y_pred = lb.transform(y_pred)
         return metrics.roc_auc_score(y_test, y_pred, average=average)
 
+    def datasets(self, dataset_path, split, band_type, train_split_ratio):
+        dataset = torch.load(dataset_path)[split]
+        train_val_dataset = data.TensorDataset(dataset["train"][band_type], dataset["train"]["labels"].long())
+        # Add sparce datasplit
+        train_dataset, validation_dataset = data.random_split(train_val_dataset, train_split_ratio)
+        test_dataset = data.TensorDataset(dataset["test"][band_type], dataset["test"]["labels"].long())
+        return train_dataset, validation_dataset, test_dataset
+
+    def dataloaders(self, train_dataset, validation_dataset, test_dataset, **kwargs):
+        train_dataloader = data.DataLoader(test_dataset, **kwargs)
+        validation_dataloader = data.DataLoader(validation_dataset, **kwargs)
+        test_dataloader = data.DataLoader(train_dataset, **kwargs)
+        return train_dataloader, validation_dataloader, test_dataloader
+
+
+
+
+
+
