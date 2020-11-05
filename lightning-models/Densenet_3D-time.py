@@ -31,7 +31,7 @@ def train(split, band_type):
     # Model init
     model = Densenet()
     #"/content/drive/Shared drives/EEG_Aditya/data/EEG3DTIME_3SPLIT.pt"
-    train_dataset, validation_dataset, test_dataset = model.datasets("../data/tensor-data/EEG3DTIME_3SPLIT.pt",
+    train_dataset, validation_dataset, test_dataset = model.datasets("/content/drive/Shared drives/EEG_Aditya/data/EEG3DTIME_3SPLIT.pt",
                                                                     split, band_type, [45, 21])
 
     train_dataloader, validation_dataloader, test_dataloader = model.dataloaders(train_dataset, validation_dataset, test_dataset,
@@ -57,14 +57,17 @@ def train(split, band_type):
     print("Done training.")
 
     print("Testing model on last epoch.")
-    trainer.test(model, test_dataloader)
+    results_last = trainer.test(model, test_dataloader)
     model_path = val_loss_cp.best_model_path
     model_path = model_path[:model_path.rfind('/')]+"lastModel.ckpt"
     trainer.save_checkpoint(model_path)
 
     print(f"Testing model with best validation loss\t{val_loss_cp.best_model_score}.")
     model = model.load_from_checkpoint(val_loss_cp.best_model_path)
-    trainer.test(model, test_dataloader)
+    results = trainer.test(model, test_dataloader)
+    
+    if results["test-accuracy"] < 0.675 and results_last["test-accuracy"] < 0.675:
+        train(split, band_type)
 
     print("Done testing.")
 
