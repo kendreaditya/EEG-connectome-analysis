@@ -43,7 +43,7 @@ def train(split, band_type):
     model.model_tags.append("validation:"+str(len(validation_dataset)))
     model.model_tags.append("test:"+str(len(test_dataset)))
     model.model_tags.append("seed:"+str(model.seed))
-
+s
     wandb_logger = WandbLogger(name=model.model_name, tags=model.model_tags, project="eeg-connectome-analysis", save_dir="/content/drive/Shared drives/EEG_Aditya/model-results/wandb", log_model=True)
     wandb_logger.watch(model, log='gradients', log_freq=100)
 
@@ -57,7 +57,6 @@ def train(split, band_type):
     print("Done training.")
 
     print("Testing model on last epoch.")
-    results_last = trainer.test(model, test_dataloader)
     model_path = val_loss_cp.best_model_path
     model_path = model_path[:model_path.rfind('/')]+"lastModel.ckpt"
     trainer.save_checkpoint(model_path)
@@ -66,7 +65,7 @@ def train(split, band_type):
     model = model.load_from_checkpoint(val_loss_cp.best_model_path)
     results = trainer.test(model, test_dataloader)
     
-    if results["test-accuracy"] < 0.675 and results_last["test-accuracy"] < 0.675:
+    if results[0]["test-accuracy"] < 0.675:
         train(split, band_type)
 
     print("Done testing.")
