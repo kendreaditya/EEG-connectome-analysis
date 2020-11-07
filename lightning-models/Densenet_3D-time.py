@@ -43,7 +43,7 @@ def train(split, band_type):
     model.model_tags.append("validation:"+str(len(validation_dataset)))
     model.model_tags.append("test:"+str(len(test_dataset)))
     model.model_tags.append("seed:"+str(model.seed))
-s
+
     wandb_logger = WandbLogger(name=model.model_name, tags=model.model_tags, project="eeg-connectome-analysis", save_dir="/content/drive/Shared drives/EEG_Aditya/model-results/wandb", log_model=True)
     wandb_logger.watch(model, log='gradients', log_freq=100)
 

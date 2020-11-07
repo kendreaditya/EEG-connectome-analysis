@@ -27,7 +27,7 @@ class Densenet(prebpl.PrebuiltLightningModule):
         return X
     
     def configure_optimizers(self):
-        optimzer = torch.optim.SGD(self.parameters(), lr=1e-6, momentum=1)
+        optimzer = torch.optim.SGD(self.parameters(), lr=1e-5, momentum=1)
         return optimzer
 
 def train(split, band_type):
