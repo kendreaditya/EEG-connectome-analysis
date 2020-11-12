@@ -53,6 +53,15 @@ class Prerocessor(Segmenter):
             indexs += [i for i in range(arg[0], arg[1])]
         return indexs
 
+    def transform_data(self, data):
+        data = np.array(data)
+        shape = data.shape
+        t_data = np.zeros([shape[-1]]+list(shape[:-1]))
+        for i in range(shape[-1]):
+            t_data[i] = data[:,:,:,i]
+        del data
+        return t_data
+
     def split_bands(self, dataset):
         band_data = {"delta":[],
                  "theta":[],
@@ -70,6 +79,7 @@ class Prerocessor(Segmenter):
                     # appended.shape = [34, 34]
                     # time_data.shape = [130,34,34,4]
                     time_data.append(datum[i][:,:,:,:,n][0])
+                time_data = self.transform_data(time_data)
                 band_data[list(band_data.keys())[i]].append(time_data)
             band_data["labels"].append(label-1.)
 

@@ -53,6 +53,15 @@ class Prerocessor(Segmenter):
             indexs += [i for i in range(arg[0], arg[1])]
         return indexs
 
+    def transform_data(self, data):
+        data = np.array(data)
+        shape = data.shape
+        t_data = np.zeros([shape[-1]]+list(shape[:-1]))
+        for i in range(shape[-1]):
+            t_data[i] = data[:,:,i]
+        del data
+        return t_data
+
     def split_bands(self, dataset):
         band_data = {"delta":[],
                  "theta":[],
@@ -64,7 +73,8 @@ class Prerocessor(Segmenter):
         for datum, label in tqdm(dataset):
             datum = [datum[:,:,:,0:3], datum[:,:,:,3:7], datum[:,:,:,7:12], datum[:,:,:,12:30], datum[:,:,:,0:30]]
             for i in range(len(datum)):
-                band_data[list(band_data.keys())[i]].append(self.average(datum[i], [1, 34, 34, len(datum[i][0][0][0]), -1]))
+                avg_data = (self.average(datum[i], [34, 34, len(datum[i][0][0][0]), -1]))
+                band_data[list(band_data.keys())[i]].append(self.transform_data(avg_data))
             band_data["labels"].append(label-1.)
 
         # converts data in list to torch.tensor
