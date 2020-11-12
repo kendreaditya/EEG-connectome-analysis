@@ -119,7 +119,10 @@ class PrebuiltLightningModule(pl.LightningModule):
         validation_dataset = {"data":[], "labels": []}
         validation_dist = {i:0 for i in range(num_classes)}
 
-        for x,y in zip(X, labels):
+        trans_x_y = list(zip(X, labels))
+        np.random.shuffle(trans_x_y)
+        
+        for x,y in trans_x_y:
             x = np.array(x)
             if validation_dist[int(y)] < (train_split_ratio[1]//num_classes):
                 validation_dataset["data"].append(x)

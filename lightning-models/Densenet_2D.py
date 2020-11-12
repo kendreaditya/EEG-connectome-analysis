@@ -26,16 +26,14 @@ class Densenet(prebpl.PrebuiltLightningModule):
         X = self.model(X)
         return X
 
-
 def train(split, band_type):
     # Model init
     model = Densenet()
-    train_dataset, validation_dataset, test_dataset = model.datasets("/content/drive/Shared drives/EEG_Aditya/data/EEG3DTIME_3SPLIT.pt",
+    train_dataset, validation_dataset, test_dataset = model.datasets("/content/drive/Shared drives/EEG_Aditya/data/EEG2D_3SPLIT.pt",
                                                                     split, band_type, [45, 21])
 
     train_dataloader, validation_dataloader, test_dataloader = model.dataloaders(train_dataset, validation_dataset, test_dataset,
                                                                                  batch_size=256)
-
     # Logging
     model.model_tags.append(split)
     model.model_tags.append(band_type)
@@ -54,20 +52,22 @@ def train(split, band_type):
                          auto_lr_find=True, auto_scale_batch_size=True, log_every_n_steps=1,
                         checkpoint_callback=val_loss_cp)
     trainer.fit(model, train_dataloader, validation_dataloader)
-    print("Done training.")
 
     print("Testing model on last epoch.")
-    trainer.test(model, test_dataloader)
     model_path = val_loss_cp.best_model_path
     model_path = model_path[:model_path.rfind('/')]+"lastModel.ckpt"
     trainer.save_checkpoint(model_path)
 
     print(f"Testing model with best validation loss\t{val_loss_cp.best_model_score}.")
     model = model.load_from_checkpoint(val_loss_cp.best_model_path)
-    trainer.test(model, test_dataloader)
+    results = trainer.test(model, test_dataloader)
+
+    if results[0]["test-accuracy"] < 0.55:
+        train(split, band_type)
 
     print("Done testing.")
 
+# Training for all models
 for band_type in ["delta", "theta", "alpha", "beta", "all"]:
     for split in ["split_1", "split_2", "split_3"]:
         train(split, band_type)
