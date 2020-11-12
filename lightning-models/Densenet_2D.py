@@ -26,21 +26,17 @@ class Densenet(prebpl.PrebuiltLightningModule):
         X = self.model(X)
         return X
 
-# Dataset Metadata
-train=True
-split = "split_1"
-band_type = "delta"
 
-# Model init
-model = Densenet()
-train_dataset, validation_dataset, test_dataset = model.datasets("/content/drive/Shared drives/EEG_Aditya/data/EEG3DTIME_3SPLIT.pt",
-                                                                split, band_type, [45, 21])
+def train(split, band_type):
+    # Model init
+    model = Densenet()
+    train_dataset, validation_dataset, test_dataset = model.datasets("/content/drive/Shared drives/EEG_Aditya/data/EEG3DTIME_3SPLIT.pt",
+                                                                    split, band_type, [45, 21])
 
-train_dataloader, validation_dataloader, test_dataloader = model.dataloaders(train_dataset, validation_dataset, test_dataset,
-                                                                             batch_size=256)
+    train_dataloader, validation_dataloader, test_dataloader = model.dataloaders(train_dataset, validation_dataset, test_dataset,
+                                                                                 batch_size=256)
 
-if train:
-# Logging
+    # Logging
     model.model_tags.append(split)
     model.model_tags.append(band_type)
     model.model_tags.append("train:"+str(len(train_dataset)))
@@ -51,7 +47,7 @@ if train:
     wandb_logger = WandbLogger(name=model.model_name, tags=model.model_tags, project="eeg-connectome-analysis", save_dir="/content/drive/Shared drives/EEG_Aditya/model-results/wandb", log_model=True)
     wandb_logger.watch(model, log='gradients', log_freq=100)
 
-# Checkpoints
+    # Checkpoints
     val_loss_cp = pl.callbacks.ModelCheckpoint(monitor='validation-loss')
 
     trainer = pl.Trainer(max_epochs=1000, gpus=1, logger=wandb_logger, precision=16, fast_dev_run=False,
@@ -71,3 +67,8 @@ if train:
     trainer.test(model, test_dataloader)
 
     print("Done testing.")
+
+for band_type in ["delta", "theta", "alpha", "beta", "all"]:
+    for split in ["split_1", "split_2", "split_3"]:
+        train(split, band_type)
+        print(f"Done with {band_type} with split {split}.")

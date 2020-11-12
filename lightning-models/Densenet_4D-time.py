@@ -13,11 +13,11 @@ import numpy as np
 from pdb import set_trace as bp
 
 class Densenet(prebpl.PrebuiltLightningModule):
-    def __init__(self, input_size=(1,1,130,34,34), in_channel=1, growth_rate=12, block_config=(6, 12, 24, 16), channel_num=32, bn_size=4, dropout_rate=0):
+    def __init__(self, input_size=(1,30,34,34,130), growth_rate=12, block_config=(6, 12, 24), channel_num=256, bn_size=4, dropout_rate=0):
         super().__init__()
         self.model = dn.DenseNet(growth_rate=growth_rate, block_config=block_config, num_init_features=channel_num,
                                  bn_size=bn_size, drop_rate=dropout_rate, num_classes=3, memory_efficient=False,
-                                 input_size=input_size)
+                                 input_size=input_size, in_channels=input_size[1])
 
         # Model Tags
         self.set_model_tags(input_size)
@@ -27,11 +27,17 @@ class Densenet(prebpl.PrebuiltLightningModule):
         X = self.model(X)
         return X
 
+input_size = {"delta":3,
+              "theta":4,
+              "alpha":5,
+              "beta":18,
+              "all":30}
+
 def train(split, band_type):
     # Model init
-    model = Densenet()
+    model = Densenet(input_size=(1,input_size["band_type"],34,34,130))
     #"/content/drive/Shared drives/EEG_Aditya/data/EEG3DTIME_3SPLIT.pt"
-    train_dataset, validation_dataset, test_dataset = model.datasets("/content/drive/Shared drives/EEG_Aditya/data/EEG3DTIME_3SPLIT.pt",
+    train_dataset, validation_dataset, test_dataset = model.datasets("../data/tensor-data/EEG4DTIME_3SPLIT.pt",
                                                                     split, band_type, [45, 21])
 
     train_dataloader, validation_dataloader, test_dataloader = model.dataloaders(train_dataset, validation_dataset, test_dataset,

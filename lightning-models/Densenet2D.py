@@ -128,13 +128,13 @@ class DenseNet(nn.Module):
     """
 
     def __init__(self, growth_rate=32, block_config=(6, 12, 24, 16),
-                 num_init_features=64, bn_size=4, drop_rate=0, num_classes=1000, memory_efficient=False):
+                 num_init_features=64, bn_size=4, drop_rate=0, num_classes=1000, memory_efficient=False, in_channels=1):
 
         super(DenseNet, self).__init__()
 
         # First convolution
         self.features = nn.Sequential(OrderedDict([
-            ('conv0', nn.Conv2d(1, num_init_features, kernel_size=7, stride=2,
+            ('conv0', nn.Conv2d(in_channels, num_init_features, kernel_size=7, stride=2,
                                 padding=3, bias=False)),
             ('norm0', nn.BatchNorm2d(num_init_features)),
             ('relu0', nn.ReLU(inplace=True)),
