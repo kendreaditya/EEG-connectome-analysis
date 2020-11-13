@@ -34,9 +34,8 @@ input_size = {"delta":3,
 
 def train(split, band_type):
     # Model init
-    model = Densenet(input_size=(1,input_size["band_type"],34,34))
-    #"../data/tensor-data/EEG3DFREQ_3SPLIT.pt",
-    train_dataset, validation_dataset, test_dataset = model.datasets("/content/drive/Shared drives/EEG_Aditya/data/EEG3DTIME_3SPLIT.pt"
+    model = Densenet(input_size=(1,input_size[band_type],34,34))
+    train_dataset, validation_dataset, test_dataset = model.datasets("/content/drive/Shared drives/EEG_Aditya/data/EEG3DFREQ-3SPLIT.pt",
                                                                     split, band_type, [45, 21])
 
     train_dataloader, validation_dataloader, test_dataloader = model.dataloaders(train_dataset, validation_dataset, test_dataset,
@@ -71,7 +70,7 @@ def train(split, band_type):
     model = model.load_from_checkpoint(val_loss_cp.best_model_path)
     results = trainer.test(model, test_dataloader)
 
-    if results["test-accuracy"] < 0.675 and results_last["test-accuracy"] < 0.675:
+    if results[0]["test-accuracy"] < 0.675:
         train(split, band_type)
 
     print("Done testing.")

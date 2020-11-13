@@ -13,7 +13,7 @@ import numpy as np
 from pdb import set_trace as bp
 
 class Densenet(prebpl.PrebuiltLightningModule):
-    def __init__(self, input_size=(1,30,34,34,130), growth_rate=12, block_config=(6, 12, 24), channel_num=256, bn_size=4, dropout_rate=0):
+    def __init__(self, input_size, growth_rate=12, block_config=(6, 12, 24), channel_num=256, bn_size=4, dropout_rate=0):
         super().__init__()
         self.model = dn.DenseNet(growth_rate=growth_rate, block_config=block_config, num_init_features=channel_num,
                                  bn_size=bn_size, drop_rate=dropout_rate, num_classes=3, memory_efficient=False,
@@ -27,7 +27,7 @@ class Densenet(prebpl.PrebuiltLightningModule):
         X = self.model(X)
         return X
 
-input_size = {"delta":3,
+band_channel_size = {"delta":3,
               "theta":4,
               "alpha":5,
               "beta":18,
@@ -35,8 +35,8 @@ input_size = {"delta":3,
 
 def train(split, band_type):
     # Model init
-    model = Densenet(input_size=(1,input_size[band_type],34,34,130))
-    train_dataset, validation_dataset, test_dataset = model.datasets("../data/tensor-data/EEG4DTIME_3SPLIT.pt",
+    model = Densenet(input_size=(1,band_channel_size[band_type],34,34,130))
+    train_dataset, validation_dataset, test_dataset = model.datasets("/content/drive/Shared drives/EEG_Aditya/data/EEG4DFREQ_3SPLIT.pt",
                                                                     split, band_type, [45, 21])
 
     train_dataloader, validation_dataloader, test_dataloader = model.dataloaders(train_dataset, validation_dataset, test_dataset,
@@ -62,7 +62,6 @@ def train(split, band_type):
     print("Done training.")
 
     print("Testing model on last epoch.")
-    results_last = trainer.test(model, test_dataloader)
     model_path = val_loss_cp.best_model_path
     model_path = model_path[:model_path.rfind('/')]+"lastModel.ckpt"
     trainer.save_checkpoint(model_path)
@@ -82,3 +81,4 @@ for band_type in ["delta", "theta", "alpha", "beta", "all"]:
     for split in ["split_1", "split_2", "split_3"]:
         train(split, band_type)
         print(f"Done with {band_type} with split {split}.")
+
