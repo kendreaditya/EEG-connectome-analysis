@@ -67,7 +67,7 @@ def train(split, band_type):
     trainer.save_checkpoint(model_path)
 
     print(f"Testing model with best validation loss\t{val_loss_cp.best_model_score}.")
-    model = model.load_from_checkpoint(val_loss_cp.best_model_path)
+    model = model.load_from_checkpoint(val_loss_cp.best_model_path, input_size=(1,band_channel_size[band_type],34,34,130))
     results = trainer.test(model, test_dataloader)
 
     if results[0]["test-accuracy"] < 0.675:
