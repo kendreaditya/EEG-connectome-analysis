@@ -36,7 +36,7 @@ input_size = {"delta":3,
 def train(split, band_type):
     # Model init
     model = Densenet(input_size=(1,input_size[band_type],34,34,130))
-    train_dataset, validation_dataset, test_dataset = model.datasets("../data/tensor-data/EEG4DTIME_3SPLIT.pt",
+    train_dataset, validation_dataset, test_dataset = model.datasets("/content/drive/Shared drives/EEG_Aditya/data/EEG4DFREQ_3SPLIT.pt",
                                                                     split, band_type, [45, 21])
 
     train_dataloader, validation_dataloader, test_dataloader = model.dataloaders(train_dataset, validation_dataset, test_dataset,
@@ -71,14 +71,12 @@ def train(split, band_type):
     model = model.load_from_checkpoint(val_loss_cp.best_model_path)
     results = trainer.test(model, test_dataloader)
 
-    if results[0]["test-accuracy"] < 0.675:
-        train(split, band_type)
-
     print("Done testing.")
 
 
 # Training for all models
 for band_type in ["delta", "theta", "alpha", "beta", "all"]:
     for split in ["split_1", "split_2", "split_3"]:
-        train(split, band_type)
-        print(f"Done with {band_type} with split {split}.")
+        for _ in range(10):
+            train(split, band_type)
+            print(f"Done with {band_type} with split {split}.")
