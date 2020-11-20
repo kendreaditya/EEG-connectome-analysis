@@ -31,7 +31,7 @@ input_size = {"delta":3,
               "theta":4,
               "alpha":5,
               "beta":18,
-              "all":30}
+              "all":3}
 
 def train(split, band_type):
     # Model init

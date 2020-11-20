@@ -13,7 +13,7 @@ import numpy as np
 from pdb import set_trace as bp
 
 class Densenet(prebpl.PrebuiltLightningModule):
-    def __init__(self, input_size, growth_rate=12, block_config=(6, 12, 24), channel_num=256, bn_size=4, dropout_rate=0):
+    def __init__(self, input_size, growth_rate=12, block_config=(4, 8, 16), channel_num=256, bn_size=4, dropout_rate=0):
         super().__init__()
         self.model = dn.DenseNet(growth_rate=growth_rate, block_config=block_config, num_init_features=channel_num,
                                  bn_size=bn_size, drop_rate=dropout_rate, num_classes=3, memory_efficient=False,
