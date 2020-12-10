@@ -27,6 +27,14 @@ class Densenet(prebpl.PrebuiltLightningModule):
         X = self.model(X)
         return X
 
+    def datasets(self, dataset_path, split, band_type, train_split_ratio):
+        dataset_path = f"{dataset_path}/EEG4DFREQ-{split[-1]}.pt"
+        dataset = torch.load(dataset_path)
+        train_dataset, validation_dataset = self.sparce_split(dataset["train"][band_type], dataset["train"]["labels"], train_split_ratio)
+        test_dataset = data.TensorDataset(dataset["test"][band_type], dataset["test"]["labels"].long())
+        return train_dataset, validation_dataset, test_dataset
+
+
 band_channel_size = {"delta":3,
               "theta":4,
               "alpha":5,
@@ -34,9 +42,9 @@ band_channel_size = {"delta":3,
               "all":30}
 
 def train(split, band_type):
-    # Model init
+    # Model ini 
     model = Densenet(input_size=(1,band_channel_size[band_type],34,34,130))
-    train_dataset, validation_dataset, test_dataset = model.datasets("/content/drive/Shared drives/EEG_Aditya/data/EEG4DFREQ_3SPLIT.pt",
+    train_dataset, validation_dataset, test_dataset = model.datasets("/content/drive/Shared drives/EEG_Aditya/data/",
                                                                     split, band_type, [45, 21])
 
     train_dataloader, validation_dataloader, test_dataloader = model.dataloaders(train_dataset, validation_dataset, test_dataset,
