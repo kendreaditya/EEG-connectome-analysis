@@ -28,7 +28,7 @@ class Densenet(prebpl.PrebuiltLightningModule):
         return X
 
     def datasets(self, dataset_path, split, band_type, train_split_ratio):
-        dataset_path = f"{dataset_path}/EEG4DFREQ-{split[-1]}.pt"
+        dataset_path = f"{dataset_path}/EEG4DFREQ-{int(split[-1])-1}.pt"
         dataset = torch.load(dataset_path)
         train_dataset, validation_dataset = self.sparce_split(dataset["train"][band_type], dataset["train"]["labels"], train_split_ratio)
         test_dataset = data.TensorDataset(dataset["test"][band_type], dataset["test"]["labels"].long())
